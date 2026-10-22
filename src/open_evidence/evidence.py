@@ -51,8 +51,10 @@ def validate_iso8601_utc(ts: str) -> str:
         msg = f"Timestamp must be a non-empty string, got {ts!r}"
         raise ValueError(msg)
 
+    # Python 3.10 compatibility: datetime.fromisoformat does not parse trailing 'Z'
+    parseable = ts[:-1] + "+00:00" if ts.endswith(("Z", "z")) else ts
     try:
-        dt = datetime.datetime.fromisoformat(ts)
+        dt = datetime.datetime.fromisoformat(parseable)
     except Exception as exc:
         msg = f"Invalid ISO-8601 timestamp string: {ts!r}"
         raise ValueError(msg) from exc
