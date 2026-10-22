@@ -1,0 +1,52 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "open-evidence"
+version = "0.1.0"
+description = "Verifiable AI Evidence & Provenance Engine for deterministic, tamper-evident LLM outputs (RFC 8785 JCS + Cryptographic Proof)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [
+    { name = "huangbuqubunao-alt", email = "274485180+huangbuqubunao-alt@users.noreply.github.com" },
+]
+keywords = ["ai", "llm", "provenance", "jcs", "rfc8785", "evidence", "audit", "security"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Security :: Cryptography",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "pydantic>=2.0,<3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "mypy>=1.10.0",
+    "pytest>=8.0.0",
+    "ruff>=0.4.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/huangbuqubunao-alt/open-evidence"
+Repository = "https://github.com/huangbuqubunao-alt/open-evidence"
+"Bug Tracker" = "https://github.com/huangbuqubunao-alt/open-evidence/issues"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --strict-markers"
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_unused_configs = true
+disallow_untyped_defs = true
