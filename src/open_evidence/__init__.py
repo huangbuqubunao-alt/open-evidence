@@ -11,6 +11,7 @@ from open_evidence.contracts import (
     FallbackPolicy,
     ModelProviderKind,
     StructuredOutputMode,
+    verify_audited_response,
 )
 from open_evidence.evidence import (
     EvidenceSeal,
@@ -42,5 +43,6 @@ __all__ = [
     "jcs_serialize",
     "jcs_sha256",
     "seal_payload",
+    "verify_audited_response",
     "verify_seal",
 ]

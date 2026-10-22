@@ -182,6 +182,46 @@ def _reject_non_finite_constant(name: str) -> NoReturn:
     raise ValueError(msg)
 
 
+def _parse_float_strict(num_str: str) -> float:
+    val = float(num_str)
+    if math.isnan(val) or math.isinf(val):
+        msg = f"non-finite JSON number out of IEEE 754 range: {num_str}"
+        raise ValueError(msg)
+    return val
+
+
+def _parse_int_strict(num_str: str) -> int:
+    val = int(num_str)
+    if val < MIN_SAFE_INTEGER or val > MAX_SAFE_INTEGER:
+        msg = (
+            f"integer {num_str} exceeds I-JSON / IEEE-754 safe integer range "
+            f"[-{MAX_SAFE_INTEGER}, {MAX_SAFE_INTEGER}]"
+        )
+        raise ValueError(msg)
+    return val
+
+
+def _validate_json_scalars(obj: object) -> None:
+    """Validate that all strings and keys in the parsed object contain valid Unicode scalar values."""
+    if isinstance(obj, str):
+        try:
+            obj.encode("utf-8")
+        except UnicodeEncodeError as exc:
+            msg = f"JSON string contains unpaired surrogates: {exc}"
+            raise ValueError(msg) from exc
+    elif isinstance(obj, dict):
+        for k, v in obj.items():
+            try:
+                k.encode("utf-8")
+            except UnicodeEncodeError as exc:
+                msg = f"JSON object key contains unpaired surrogates: {exc}"
+                raise ValueError(msg) from exc
+            _validate_json_scalars(v)
+    elif isinstance(obj, list):
+        for item in obj:
+            _validate_json_scalars(item)
+
+
 _STRICT_PAIRS_HOOK: Final[Callable[[list[tuple[str, object]]], dict[str, object]]] = (
     _reject_duplicate_keys
 )
@@ -196,19 +236,29 @@ def jcs_loads_strict(data: bytes | str) -> object:
             msg = "JSON bytes must be strict UTF-8"
             raise ValueError(msg) from exc
     elif isinstance(data, str):
+        try:
+            data.encode("utf-8")
+        except UnicodeEncodeError as exc:
+            msg = f"JSON string must not contain unpaired surrogates: {exc}"
+            raise ValueError(msg) from exc
         text = data
     else:
         msg = f"JSON input must be bytes or str, got {type(data).__name__}"
         raise TypeError(msg)
     try:
-        return json.loads(
+        parsed = json.loads(
             text,
             object_pairs_hook=_STRICT_PAIRS_HOOK,
             parse_constant=_reject_non_finite_constant,
+            parse_float=_parse_float_strict,
+            parse_int=_parse_int_strict,
         )
     except json.JSONDecodeError as exc:
         msg = f"JSON is malformed: {exc.msg}"
         raise ValueError(msg) from exc
+
+    _validate_json_scalars(parsed)
+    return parsed
 
 
 def jcs_sha256(value: object) -> str:

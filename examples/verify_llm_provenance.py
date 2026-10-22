@@ -15,6 +15,7 @@ from open_evidence import (
     ExecutionProfile,
     ModelProviderKind,
     StructuredOutputMode,
+    verify_audited_response,
     verify_seal,
 )
 
@@ -49,32 +50,46 @@ def main() -> None:
     print(f"   Payload Hash: {response.seal.payload_sha256}")
     print(f"   Seal Hash:    {response.seal.seal_sha256}\n")
 
-    # Step 3: Downstream Verification
-    verification = verify_seal(
-        {
-            "profile_sha256": response.profile_sha256,
-            "prompt_sha256": response.prompt_sha256,
-            "raw_response": response.raw_response,
-            "structured_data": response.structured_data,
-        },
-        response.seal,
-    )
-    print(f"3. Verification Result: Valid = {verification.is_valid}")
+    # Step 3: Full Downstream Verification
+    verification = response.verify(prompt=prompt_text)
+    print(f"3. Full Verification Result: Valid = {verification.is_valid}")
     assert verification.is_valid, "Expected valid verification"
 
-    # Step 4: Mutation / Tampering Detection Test
-    print("\n4. Simulating In-Transit Payload Modification...")
+    # Step 4: Mutation / Tampering Detection Tests
+    print("\n4. Simulating Tampering Scenarios...")
+
+    # Scenario A: Payload data modification
+    print("   [Scenario A] In-transit structured_data modification...")
     tampered_payload = {
         "profile_sha256": response.profile_sha256,
         "prompt_sha256": response.prompt_sha256,
         "raw_response": mock_llm_raw,
         "structured_data": {"risk_level": "LOW", "primary_factor": "Supply chain disruption"},  # Altered!
     }
-
     tamper_result = verify_seal(tampered_payload, response.seal)
-    print(f"   Modified Payload Verification: Valid = {tamper_result.is_valid}")
-    print(f"   Detection Message: {tamper_result.error_message}")
-    assert not tamper_result.is_valid, "Modification should be detected!"
+    print(f"   Payload Tamper Valid: {tamper_result.is_valid} (Error: {tamper_result.error_message})")
+    assert not tamper_result.is_valid, "Data modification should be detected!"
+
+    # Scenario B: Execution profile swapping (e.g. claiming o3-mini but actually gpt-4o)
+    print("   [Scenario B] Swapped execution profile...")
+    swapped_profile = ExecutionProfile(
+        provider_kind=ModelProviderKind.CLOUD_OPENAI,
+        provider_id="openai-us-east",
+        model_name="gpt-4o",  # swapped!
+        output_mode=StructuredOutputMode.PROVIDER_JSON_SCHEMA,
+        temperature=0.0,
+    )
+    bypassed_response = AuditedModelResponse.model_construct(
+        prompt_sha256=response.prompt_sha256,
+        profile=swapped_profile,
+        profile_sha256=response.profile_sha256,
+        raw_response=response.raw_response,
+        structured_data=response.structured_data,
+        seal=response.seal,
+    )
+    profile_tamper_result = verify_audited_response(bypassed_response, prompt=prompt_text)
+    print(f"   Profile Tamper Valid: {profile_tamper_result.is_valid} (Error: {profile_tamper_result.error_message})")
+    assert not profile_tamper_result.is_valid, "Profile swap must be detected!"
 
     print("\n=== Security Boundary Clarification ===")
     print("- Content Integrity: GUARANTEED (detects byte mismatch against authentic seal).")

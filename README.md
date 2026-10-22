@@ -20,10 +20,10 @@ To maintain complete cryptographic rigor, `open-evidence` clearly distinguishes 
 
 | Property | What `open-evidence` Guarantees | What It Does NOT Guarantee (Requires External Infrastructure) |
 |:---|:---|:---|
-| **Content Integrity** | **GUARANTEED**: Uses RFC 8785 JCS canonical bytes and SHA-256 to detect any in-transit byte modification, bit rot, or payload mutation against an authentic seal. | Does not prevent an active attacker from replacing *both* the payload and unkeyed seal if transmitted over an untrusted channel. |
+| **Content Integrity** | **GUARANTEED**: Uses RFC 8785 JCS canonical bytes and SHA-256 to detect any in-transit byte modification, bit rot, or payload mutation against an authentic seal.<br>*(Note: Guarantees canonical JSON structural integrity. To seal raw binary streams, hash raw bytes directly. Python dictionaries/lists remain mutable in-memory; modify-after-seal will trigger a verification failure).* | Does not prevent an active attacker from replacing *both* the payload and unkeyed seal if transmitted over an untrusted channel. |
 | **Origin Authenticity** | **Execution Context Binding**: Deterministically binds model prompt, execution profile (hyperparameters), raw response, and metadata into a canonical digest envelope. | **Not Autonomous Author Authentication**: Unkeyed SHA-256 proves data matching, not author identity. For non-repudiation, sign the `EvidenceSeal.seal_sha256` with a private key (e.g., Ed25519) or anchor it in a trusted log. |
 | **Factual Truth** | **Byte Preservation**: Verifies that the recorded text and structured fields are preserved exactly as captured at runtime. | **Not Semantic Truth**: Cryptographic hashing cannot evaluate whether the LLM's claims are factual, accurate, or free from hallucinations. |
-| **Timestamping** | **System Recorded Time**: Records an ISO-8601 UTC timestamp in the canonical envelope preimage. | **Not a TSA Token**: It is a self-asserted timestamp, not an RFC 3161 cryptographically certified timestamp from a Timestamp Authority. |
+| **Timestamping** | **System Recorded Time**: Records an ISO-8601 UTC timestamp in the canonical envelope preimage. | **Not a TSA Token**: It is a self-asserted ISO-8601 UTC timestamp string captured at runtime, not an RFC 3161 cryptographically certified timestamp from a Timestamp Authority. |
 
 ---
 
@@ -40,9 +40,10 @@ To maintain complete cryptographic rigor, `open-evidence` clearly distinguishes 
   - Automated modification detection for downstream consumers, CI pipelines, and compliance audit trails.
 - **Provider-Neutral Model Contracts**:
   - Immutable domain contracts for structured LLM returns across OpenAI, Anthropic, and local runtimes.
-  - Directed Acyclic Graph (DAG) fallback policies with cycle and runaway recursion guards.
-- **Zero Heavy Dependencies**:
-  - Requires only `pydantic>=2.0` for runtime models; JCS core is 100% Python standard library.
+  - Ordered fallback chains with duplicate and cycle prevention.
+- **Minimal Dependencies**:
+  - Standalone JCS core (`open_evidence.jcs`) has zero external dependencies (100% Python standard library).
+  - Runtime models require only `pydantic>=2.0` for structured contract validation.
 
 ---
 
@@ -128,6 +129,10 @@ response = AuditedModelResponse.create(
 
 print(f"Audited Profile Hash: {response.profile_sha256}")
 print(f"Seal Timestamp:       {response.seal.created_at}")
+
+# Downstream verification: validates profile consistency, seal, and prompt binding
+verification = response.verify(prompt="Extract key terms from loan contract.")
+assert verification.is_valid is True
 ```
 
 ---
@@ -150,7 +155,7 @@ See [docs/architecture.md](docs/architecture.md) for full technical specificatio
 
 ## Quality & Testing
 
-- **100% test coverage** for RFC 8785 normative test vectors and differential parity against Node.js ECMAScript engine.
+- **Comprehensive test suite** covering RFC 8785 normative test vectors, safe integer boundaries, profile tampering detection, and differential parity against Node.js ECMAScript engine.
 - Strict `mypy` typing across all public APIs.
 - Continuous Integration running across Python 3.10, 3.11, 3.12, and 3.13.
 

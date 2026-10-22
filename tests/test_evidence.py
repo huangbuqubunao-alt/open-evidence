@@ -55,3 +55,21 @@ def test_tampered_seal_metadata_detected() -> None:
     assert result.is_valid is False
     assert result.error_message is not None
     assert "Seal envelope hash corrupted" in result.error_message
+
+
+def test_non_string_dictionary_keys_fail_closed() -> None:
+    # Integer key must be rejected, not converted silently to string
+    with pytest.raises(TypeError, match="Evidence payload dictionary keys must be strings"):
+        seal_payload({1: "val"})
+
+    # Boolean key must be rejected
+    with pytest.raises(TypeError, match="Evidence payload dictionary keys must be strings"):
+        seal_payload({True: "val"})
+
+    # Collision-prone dict with both int and string keys must fail closed
+    with pytest.raises(TypeError, match="Evidence payload dictionary keys must be strings"):
+        seal_payload({1: "first", "1": "second"})
+
+    # Nested dictionary with non-string key must also fail closed
+    with pytest.raises(TypeError, match="Evidence payload dictionary keys must be strings"):
+        seal_payload({"nested": {100: "bad"}})

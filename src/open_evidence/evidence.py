@@ -73,14 +73,29 @@ class VerificationResult:
 
 
 def _to_plain_dict(value: Any) -> Any:
-    """Normalize Pydantic models, dataclasses, or dicts into canonical JSON types."""
+    """Normalize Pydantic models, dataclasses, or dicts into canonical JSON types.
+
+    Enforces fail-closed validation on dictionary keys: all keys MUST be strings.
+    Silent stringification of non-string keys is strictly forbidden to prevent
+    implicit key collisions and field overwriting.
+    """
     if isinstance(value, BaseModel):
-        return value.model_dump(mode="json")
+        return _to_plain_dict(value.model_dump(mode="json"))
     if hasattr(value, "__dataclass_fields__"):
         import dataclasses
-        return dataclasses.asdict(value)
+
+        return _to_plain_dict(dataclasses.asdict(value))
     if isinstance(value, dict):
-        return {str(k): _to_plain_dict(v) for k, v in value.items()}
+        result: dict[str, Any] = {}
+        for k, v in value.items():
+            if not isinstance(k, str):
+                msg = (
+                    f"Evidence payload dictionary keys must be strings, "
+                    f"got {type(k).__name__}: {k!r}. Silent key coercion is forbidden."
+                )
+                raise TypeError(msg)
+            result[k] = _to_plain_dict(v)
+        return result
     if isinstance(value, (list, tuple)):
         return [_to_plain_dict(v) for v in value]
     return value

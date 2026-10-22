@@ -111,3 +111,30 @@ def test_sha256_deterministic() -> None:
     obj1 = {"b": 2, "a": 1}
     obj2 = {"a": 1, "b": 2}
     assert jcs_sha256(obj1) == jcs_sha256(obj2)
+
+
+def test_jcs_loads_strict_rejects_inf_and_nan_numbers() -> None:
+    with pytest.raises(ValueError, match="non-finite JSON number out of IEEE 754 range"):
+        jcs_loads_strict("1e999")
+    with pytest.raises(ValueError, match="non-finite JSON number out of IEEE 754 range"):
+        jcs_loads_strict("-1e999")
+    with pytest.raises(ValueError, match="non-finite JSON constant"):
+        jcs_loads_strict("NaN")
+    with pytest.raises(ValueError, match="non-finite JSON constant"):
+        jcs_loads_strict("Infinity")
+
+
+def test_jcs_loads_strict_rejects_out_of_range_integers() -> None:
+    with pytest.raises(ValueError, match="exceeds I-JSON / IEEE-754 safe integer range"):
+        jcs_loads_strict("9007199254740992")
+    with pytest.raises(ValueError, match="exceeds I-JSON / IEEE-754 safe integer range"):
+        jcs_loads_strict("-9007199254740992")
+    with pytest.raises(ValueError, match="exceeds I-JSON / IEEE-754 safe integer range"):
+        jcs_loads_strict("1000000000000000000000000000000")
+
+
+def test_jcs_loads_strict_rejects_unpaired_surrogates() -> None:
+    with pytest.raises(ValueError, match="unpaired surrogates"):
+        jcs_loads_strict('"\\ud800"')
+    with pytest.raises(ValueError, match="unpaired surrogates"):
+        jcs_loads_strict('{"\\ud800": "val"}')
