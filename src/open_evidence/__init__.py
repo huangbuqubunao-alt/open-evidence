@@ -1,8 +1,8 @@
-"""Open Evidence: Verifiable AI Evidence & Provenance Engine.
+"""Open Evidence: Content Integrity and Provenance Engine for AI Pipelines.
 
 A lightweight, dependency-free RFC 8785 JSON Canonicalization Scheme (JCS)
-and cryptographic evidence sealing library for deterministic, tamper-evident
-LLM pipelines.
+and cryptographic content integrity sealing library for deterministic,
+verifiable LLM pipelines.
 """
 
 from open_evidence.contracts import (
@@ -14,6 +14,7 @@ from open_evidence.contracts import (
 )
 from open_evidence.evidence import (
     EvidenceSeal,
+    IntegrityVerificationError,
     TamperedEvidenceError,
     VerificationResult,
     seal_payload,
@@ -32,6 +33,7 @@ __all__ = [
     "EvidenceSeal",
     "ExecutionProfile",
     "FallbackPolicy",
+    "IntegrityVerificationError",
     "ModelProviderKind",
     "StructuredOutputMode",
     "TamperedEvidenceError",

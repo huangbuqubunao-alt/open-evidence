@@ -1,4 +1,5 @@
 import pytest
+
 from open_evidence.contracts import (
     AuditedModelResponse,
     ExecutionProfile,
@@ -9,7 +10,7 @@ from open_evidence.contracts import (
 from open_evidence.evidence import verify_seal
 
 
-def test_audited_model_response_lifecycle():
+def test_audited_model_response_lifecycle() -> None:
     profile = ExecutionProfile(
         provider_kind=ModelProviderKind.CLOUD_OPENAI,
         provider_id="openai-main",
@@ -41,7 +42,7 @@ def test_audited_model_response_lifecycle():
     assert verification.is_valid is True
 
 
-def test_fallback_policy_rejects_cycles():
+def test_fallback_policy_rejects_cycles() -> None:
     profile1 = ExecutionProfile(
         provider_kind=ModelProviderKind.CLOUD_OPENAI,
         provider_id="p1",

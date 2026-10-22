@@ -4,25 +4,40 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python: 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 
-**Verifiable AI Evidence & Provenance Engine for deterministic, tamper-evident LLM pipelines.**
+**Deterministic Content Integrity and Provenance Engine for AI Pipelines (RFC 8785 JCS + SHA-256 Digest Envelopes)**
 
-`open-evidence` solves a foundational challenge in modern production AI systems: **how to cryptographically prove that an AI model output is authentic, reproducible, and has not been altered or hallucinated in transit.**
+`open-evidence` solves a foundational infrastructure challenge in modern production AI systems: **how to ensure deterministic serialization and verifiable content integrity for AI model outputs, execution configs, and structured artifacts.**
 
-By combining a pure standard-library implementation of **RFC 8785 JSON Canonicalization Scheme (JCS)** with SHA-256 seal envelopes and provider-neutral execution contracts, `open-evidence` enables developers to establish an auditable chain of custody for any LLM-driven application.
+By combining a pure standard-library implementation of **RFC 8785 JSON Canonicalization Scheme (JCS)** with SHA-256 seal envelopes and provider-neutral execution contracts, `open-evidence` enables developers to establish an auditable, bit-exact record for LLM-driven applications.
 
 [中文文档 (README.zh-CN.md)](README.zh-CN.md)
+
+---
+
+## Security Boundaries & Cryptographic Claims
+
+To maintain complete cryptographic rigor, `open-evidence` clearly distinguishes between integrity, authenticity, and semantic factuality:
+
+| Property | What `open-evidence` Guarantees | What It Does NOT Guarantee (Requires External Infrastructure) |
+|:---|:---|:---|
+| **Content Integrity** | **GUARANTEED**: Uses RFC 8785 JCS canonical bytes and SHA-256 to detect any in-transit byte modification, bit rot, or payload mutation against an authentic seal. | Does not prevent an active attacker from replacing *both* the payload and unkeyed seal if transmitted over an untrusted channel. |
+| **Origin Authenticity** | **Execution Context Binding**: Deterministically binds model prompt, execution profile (hyperparameters), raw response, and metadata into a canonical digest envelope. | **Not Autonomous Author Authentication**: Unkeyed SHA-256 proves data matching, not author identity. For non-repudiation, sign the `EvidenceSeal.seal_sha256` with a private key (e.g., Ed25519) or anchor it in a trusted log. |
+| **Factual Truth** | **Byte Preservation**: Verifies that the recorded text and structured fields are preserved exactly as captured at runtime. | **Not Semantic Truth**: Cryptographic hashing cannot evaluate whether the LLM's claims are factual, accurate, or free from hallucinations. |
+| **Timestamping** | **System Recorded Time**: Records an ISO-8601 UTC timestamp in the canonical envelope preimage. | **Not a TSA Token**: It is a self-asserted timestamp, not an RFC 3161 cryptographically certified timestamp from a Timestamp Authority. |
 
 ---
 
 ## Key Features
 
 - **Standard RFC 8785 Canonicalization (JCS)**:
-  - 100% dependency-free, pure Python implementation conforming to ECMA-262 Section 7.1.12.1.
+  - 100% dependency-free, pure Python implementation conforming to RFC 8785 and ECMA-262 Section 7.1.12.1.
   - Strict UTF-16 code-unit property sorting and exact ECMAScript `NumberToString` formatting.
+  - Enforces I-JSON (RFC 7493) safe integer boundaries `[-(2^53 - 1), 2^53 - 1]`.
   - Duplicate key detection and rejection (fail-closed against hash collisions).
-- **Cryptographic Evidence Sealing**:
+  - Passes official RFC 8785 test vectors with byte-for-byte differential parity against ECMAScript/Node.js engines.
+- **Content Integrity Sealing**:
   - Deterministic SHA-256 evidence digests binding payloads, model profiles, timestamps, and caller metadata.
-  - Automated tamper detection for downstream consumers and compliance audits.
+  - Automated modification detection for downstream consumers, CI pipelines, and compliance audit trails.
 - **Provider-Neutral Model Contracts**:
   - Immutable domain contracts for structured LLM returns across OpenAI, Anthropic, and local runtimes.
   - Directed Acyclic Graph (DAG) fallback policies with cycle and runaway recursion guards.
@@ -58,32 +73,32 @@ payload = {
     "confidence_score": 0.96
 }
 
-# Generate cryptographic seal
+# Generate deterministic cryptographic integrity seal
 seal = seal_payload(payload, metadata={"auditor": "compliance-agent-01"})
 print(f"Payload Hash: {seal.payload_sha256}")
 print(f"Seal Hash:    {seal.seal_sha256}")
 
-# Verify integrity
+# Verify content integrity
 result = verify_seal(payload, seal, strict=True)
 assert result.is_valid is True
 ```
 
-### 2. Detect In-Transit Tampering
+### 2. Detect In-Transit Payload Modification
 
 ```python
-from open_evidence import verify_seal, TamperedEvidenceError
+from open_evidence import verify_seal, IntegrityVerificationError
 
-# An unauthorized party alters the confidence score
+# Downstream consumer receives an altered payload
 tampered_payload = {
     "claim": "Quarterly operating profit increased by 14.2%",
     "source_documents": ["sec_10k_item7.pdf#p42"],
-    "confidence_score": 0.99  # Altered!
+    "confidence_score": 0.99  # Modified!
 }
 
 result = verify_seal(tampered_payload, seal)
 print(f"Is Valid: {result.is_valid}")
 # Output: Is Valid: False
-# Error: Payload hash mismatch: payload hash is ..., seal asserts ...
+# Error: Payload hash mismatch: computed digest is ..., seal asserts ...
 ```
 
 ### 3. Audit an LLM Structured Generation
@@ -125,7 +140,7 @@ flowchart TD
     B --> C["Deterministic Canonical Bytes (Strict UTF-8)"]
     C --> D["SHA-256 Digest Computation"]
     D --> E["Bind Execution Profile & Metadata Envelope"]
-    E --> F["EvidenceSeal (Immutable Audit Receipt)"]
+    E --> F["EvidenceSeal (Immutable Integrity Receipt)"]
     F --> G["Downstream Verifier / Compliance Log"]
 ```
 
@@ -135,14 +150,14 @@ See [docs/architecture.md](docs/architecture.md) for full technical specificatio
 
 ## Quality & Testing
 
-- **100% test coverage** for RFC 8785 normative test vectors.
+- **100% test coverage** for RFC 8785 normative test vectors and differential parity against Node.js ECMAScript engine.
 - Strict `mypy` typing across all public APIs.
 - Continuous Integration running across Python 3.10, 3.11, 3.12, and 3.13.
 
 Run tests locally:
 
 ```bash
-pytest
+pytest -v
 ```
 
 ---

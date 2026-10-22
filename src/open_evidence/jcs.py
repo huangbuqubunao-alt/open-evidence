@@ -28,6 +28,9 @@ __all__ = [
     "jcs_sha256",
 ]
 
+MAX_SAFE_INTEGER: Final[int] = (2**53) - 1
+MIN_SAFE_INTEGER: Final[int] = -MAX_SAFE_INTEGER
+
 _SHORT_CONTROL_ESCAPES: Final[dict[int, str]] = {
     0x08: "\\b",
     0x09: "\\t",
@@ -37,21 +40,25 @@ _SHORT_CONTROL_ESCAPES: Final[dict[int, str]] = {
 }
 
 
-def _format_number(value: int | float) -> str:
+def _format_number(value: float) -> str:
     """Format one finite JSON number exactly per ECMAScript ``NumberToString``.
 
     The input domain is finite IEEE-754 binary64-compatible JSON numbers.
-    This is the single canonical number formatter.
+    Integers are bounded to the I-JSON (RFC 7493) and IEEE-754 safe integer range
+    [-(2**53 - 1), 2**53 - 1].
     """
     if isinstance(value, bool):
         msg = "boolean is not a JSON number"
-        raise ValueError(msg)
+        raise TypeError(msg)
 
     if isinstance(value, int):
-        number = float(value)
-        if number.is_integer() and int(number) != value:
-            msg = "integer exceeds the JCS binary64 numeric domain"
+        if value < MIN_SAFE_INTEGER or value > MAX_SAFE_INTEGER:
+            msg = (
+                f"integer {value} exceeds the I-JSON / IEEE-754 safe integer range "
+                f"[-{MAX_SAFE_INTEGER}, {MAX_SAFE_INTEGER}]"
+            )
             raise ValueError(msg)
+        number = float(value)
     else:
         number = value
 
@@ -73,7 +80,7 @@ def _format_number(value: int | float) -> str:
     exponent = digits_tuple.exponent
     if not isinstance(digits, tuple) or isinstance(exponent, str):
         msg = "unexpected decimal representation for a finite number"
-        raise ValueError(msg)
+        raise TypeError(msg)
 
     digit_count = len(digits)
     digit_string = "".join(str(digit) for digit in digits)
@@ -131,10 +138,14 @@ def _serialize_value(value: object) -> str:
         for key, item in value.items():
             if not isinstance(key, str):
                 msg = "JCS object keys must be strings"
-                raise ValueError(msg)
+                raise TypeError(msg)
             string_items.append((key, item))
         # RFC 8785: sort by UTF-16 code-unit order of the property names.
-        string_items.sort(key=lambda pair: pair[0].encode("utf-16-be"))
+        try:
+            string_items.sort(key=lambda pair: pair[0].encode("utf-16-be"))
+        except UnicodeEncodeError as exc:
+            msg = f"JCS object keys must not contain unpaired surrogates: {exc}"
+            raise ValueError(msg) from exc
         body = ",".join(
             _escape_string(key) + ":" + _serialize_value(item)
             for key, item in string_items
@@ -188,7 +199,7 @@ def jcs_loads_strict(data: bytes | str) -> object:
         text = data
     else:
         msg = f"JSON input must be bytes or str, got {type(data).__name__}"
-        raise ValueError(msg)
+        raise TypeError(msg)
     try:
         return json.loads(
             text,

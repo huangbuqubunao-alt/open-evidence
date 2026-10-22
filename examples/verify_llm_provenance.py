@@ -9,6 +9,7 @@ This runnable script demonstrates how to:
 """
 
 import json
+
 from open_evidence import (
     AuditedModelResponse,
     ExecutionProfile,
@@ -61,8 +62,8 @@ def main() -> None:
     print(f"3. Verification Result: Valid = {verification.is_valid}")
     assert verification.is_valid, "Expected valid verification"
 
-    # Step 4: Adversarial Tampering Test
-    print("\n4. Simulating Malicious Tampering...")
+    # Step 4: Mutation / Tampering Detection Test
+    print("\n4. Simulating In-Transit Payload Modification...")
     tampered_payload = {
         "profile_sha256": response.profile_sha256,
         "prompt_sha256": response.prompt_sha256,
@@ -71,11 +72,15 @@ def main() -> None:
     }
 
     tamper_result = verify_seal(tampered_payload, response.seal)
-    print(f"   Tampered Verification: Valid = {tamper_result.is_valid}")
+    print(f"   Modified Payload Verification: Valid = {tamper_result.is_valid}")
     print(f"   Detection Message: {tamper_result.error_message}")
-    assert not tamper_result.is_valid, "Tampering should be detected!"
+    assert not tamper_result.is_valid, "Modification should be detected!"
 
-    print("\n=== All Provenance Checks Succeeded ===")
+    print("\n=== Security Boundary Clarification ===")
+    print("- Content Integrity: GUARANTEED (detects byte mismatch against authentic seal).")
+    print("- Origin Authenticity: Requires anchoring the seal digest or asymmetric signing (e.g., Ed25519).")
+    print("- Factual Truth: Cryptographic seals verify byte preservation, not model semantic factuality.")
+    print("\n=== All Verification Checks Succeeded ===")
 
 
 if __name__ == "__main__":

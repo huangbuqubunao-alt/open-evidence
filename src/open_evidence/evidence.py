@@ -1,7 +1,18 @@
-"""Cryptographic AI Evidence & Provenance Sealing.
+"""Cryptographic Content Integrity and Provenance Envelope Sealing.
 
-This module provides tamper-evident evidence sealing and verification using
-RFC 8785 Canonical JSON and SHA-256 digests.
+This module provides deterministic content integrity sealing and verification using
+RFC 8785 Canonical JSON (JCS) and SHA-256 digests.
+
+Security and Cryptographic Boundaries:
+- Content Integrity (Guaranteed): Verifies that a payload matches its expected
+  canonical byte digest. Any bit flip, field modification, or structural mutation
+  will be detected when checked against an authentic seal.
+- Non-Autonomous Origin Authenticity: An unkeyed SHA-256 seal binds a payload
+  to its metadata and timestamp. It does NOT autonomously authenticate the author
+  identity or resist active replacement attacks unless the seal itself is signed
+  with a digital signature (e.g., Ed25519) or anchored in a trusted, append-only store.
+- Not Semantic / Factual Truth: Cryptographic hashes verify byte-level integrity,
+  not whether the underlying AI model output is factual, correct, or free from hallucinations.
 """
 
 from __future__ import annotations
@@ -16,6 +27,7 @@ from open_evidence.jcs import jcs_sha256
 
 __all__ = [
     "EvidenceSeal",
+    "IntegrityVerificationError",
     "TamperedEvidenceError",
     "VerificationResult",
     "seal_payload",
@@ -25,12 +37,19 @@ __all__ = [
 _FROZEN_CONFIG: Final = ConfigDict(extra="forbid", frozen=True)
 
 
-class TamperedEvidenceError(ValueError):
-    """Raised when an evidence payload does not match its cryptographic seal."""
+class IntegrityVerificationError(ValueError):
+    """Raised when an evidence payload fails cryptographic integrity verification."""
+
+
+# Backward compatibility alias
+TamperedEvidenceError = IntegrityVerificationError
 
 
 class EvidenceSeal(BaseModel):
-    """A cryptographic seal asserting the integrity and provenance of a payload."""
+    """A cryptographic integrity seal binding a payload digest with execution metadata.
+
+    Provides content integrity verification relative to the recorded SHA-256 digest.
+    """
 
     model_config = _FROZEN_CONFIG
 
@@ -143,8 +162,8 @@ def verify_seal(
     # Check 2: Does the payload match the seal's payload hash?
     if computed_payload_hash != seal_obj.payload_sha256:
         err = (
-            f"Payload hash mismatch: payload hash is {computed_payload_hash}, "
-            f"seal asserts {seal_obj.payload_sha256}. Evidence has been tampered with."
+            f"Payload hash mismatch: computed digest is {computed_payload_hash}, "
+            f"seal asserts {seal_obj.payload_sha256}. Content integrity verification failed."
         )
         if strict:
             raise TamperedEvidenceError(err)

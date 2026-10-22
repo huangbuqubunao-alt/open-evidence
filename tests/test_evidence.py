@@ -1,4 +1,5 @@
 import pytest
+
 from open_evidence.evidence import (
     EvidenceSeal,
     TamperedEvidenceError,
@@ -7,7 +8,7 @@ from open_evidence.evidence import (
 )
 
 
-def test_seal_and_verify_success():
+def test_seal_and_verify_success() -> None:
     payload = {
         "analysis": "LLM generated insight",
         "confidence": 0.98,
@@ -26,7 +27,7 @@ def test_seal_and_verify_success():
     assert result.error_message is None
 
 
-def test_tampered_payload_detected():
+def test_tampered_payload_detected() -> None:
     payload = {"account": "Alice", "amount": 100}
     seal = seal_payload(payload)
 
@@ -35,13 +36,14 @@ def test_tampered_payload_detected():
 
     result = verify_seal(tampered, seal, strict=False)
     assert result.is_valid is False
+    assert result.error_message is not None
     assert "Payload hash mismatch" in result.error_message
 
     with pytest.raises(TamperedEvidenceError, match="Payload hash mismatch"):
         verify_seal(tampered, seal, strict=True)
 
 
-def test_tampered_seal_metadata_detected():
+def test_tampered_seal_metadata_detected() -> None:
     payload = {"data": "verified"}
     seal = seal_payload(payload, metadata={"auditor": "bob"})
 
@@ -51,4 +53,5 @@ def test_tampered_seal_metadata_detected():
 
     result = verify_seal(payload, tampered_seal_dict, strict=False)
     assert result.is_valid is False
+    assert result.error_message is not None
     assert "Seal envelope hash corrupted" in result.error_message
