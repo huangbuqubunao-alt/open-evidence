@@ -1,8 +1,9 @@
 """Open Evidence: Content Integrity and Provenance Engine for AI Pipelines.
 
-A lightweight, dependency-free RFC 8785 JSON Canonicalization Scheme (JCS)
-and cryptographic content integrity sealing library for deterministic,
-verifiable LLM pipelines.
+A lightweight RFC 8785 JSON Canonicalization Scheme (JCS) and content
+integrity sealing library for deterministic, verifiable LLM pipelines.
+The standalone JCS canonicalization core is 100% Python standard library;
+structured response contracts use Pydantic.
 """
 
 from open_evidence.contracts import (
@@ -19,6 +20,7 @@ from open_evidence.evidence import (
     TamperedEvidenceError,
     VerificationResult,
     seal_payload,
+    validate_iso8601_utc,
     verify_seal,
 )
 from open_evidence.jcs import (
@@ -43,6 +45,7 @@ __all__ = [
     "jcs_serialize",
     "jcs_sha256",
     "seal_payload",
+    "validate_iso8601_utc",
     "verify_audited_response",
     "verify_seal",
 ]

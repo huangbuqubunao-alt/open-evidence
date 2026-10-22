@@ -16,13 +16,13 @@
    An `EvidenceSeal` binds four critical components:
    - `schema_version`: Version marker for forward compatibility.
    - `payload_sha256`: SHA-256 digest of the canonicalized payload bytes.
-   - `created_at`: Self-asserted ISO-8601 UTC timestamp string captured at seal creation time (not an RFC 3161 TSA-certified token).
+   - `created_at`: Strictly validated ISO-8601 UTC timestamp string captured at seal creation time (not an RFC 3161 TSA-certified token).
    - `metadata`: Arbitrary key-value pairs (auditor ID, runtime environment, provider metadata).
    The entire preimage is canonicalized and hashed to produce `seal_sha256`. Modifying any field immediately invalidates the seal.
    *(Note: Protects canonical JSON structural integrity under RFC 8785 representation. Raw unparsed stream integrity requires raw byte sealing. Python dict/list structures remain mutable in Python memory; modify-after-seal will cause verification failure).*
 
 3. **Cryptographic Boundaries**:
-   - **Content Integrity**: Guaranteed against accidental corruption or modifications relative to a known authentic digest.
+   - **Content Integrity**: Verifiable against accidental corruption or modifications relative to a known authentic digest.
    - **Origin Authenticity**: Unkeyed SHA-256 does not autonomously authenticate the author. If non-repudiation is required, callers should sign `seal_sha256` with an asymmetric private key (e.g., Ed25519) or record it in a tamper-resistant audit log.
    - **Semantic Truth**: Hashing verifies bit-level preservation, not the factual truthfulness of model outputs.
 

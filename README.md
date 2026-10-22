@@ -8,7 +8,7 @@
 
 `open-evidence` solves a foundational infrastructure challenge in modern production AI systems: **how to ensure deterministic serialization and verifiable content integrity for AI model outputs, execution configs, and structured artifacts.**
 
-By combining a pure standard-library implementation of **RFC 8785 JSON Canonicalization Scheme (JCS)** with SHA-256 seal envelopes and provider-neutral execution contracts, `open-evidence` enables developers to establish an auditable, bit-exact record for LLM-driven applications.
+By combining a pure standard-library implementation of **RFC 8785 JSON Canonicalization Scheme (JCS)** with SHA-256 seal envelopes and provider-neutral execution contracts, `open-evidence` enables developers to establish an auditable, reproducible canonical record for LLM-driven applications.
 
 [中文文档 (README.zh-CN.md)](README.zh-CN.md)
 
@@ -20,10 +20,10 @@ To maintain complete cryptographic rigor, `open-evidence` clearly distinguishes 
 
 | Property | What `open-evidence` Guarantees | What It Does NOT Guarantee (Requires External Infrastructure) |
 |:---|:---|:---|
-| **Content Integrity** | **GUARANTEED**: Uses RFC 8785 JCS canonical bytes and SHA-256 to detect any in-transit byte modification, bit rot, or payload mutation against an authentic seal.<br>*(Note: Guarantees canonical JSON structural integrity. To seal raw binary streams, hash raw bytes directly. Python dictionaries/lists remain mutable in-memory; modify-after-seal will trigger a verification failure).* | Does not prevent an active attacker from replacing *both* the payload and unkeyed seal if transmitted over an untrusted channel. |
+| **Content Integrity** | **Verifiable (Relative to Authentic Seal)**: Uses RFC 8785 JCS canonical bytes and SHA-256 to detect any in-transit modification, bit rot, or payload mutation against an authentic seal.<br>*(Note: Guarantees canonical JSON structural equivalence. Semantically equivalent raw JSON strings with varying whitespace or key ordering normalize to the identical canonical representation, as intended by RFC 8785. To seal raw byte streams without JSON normalization, hash raw bytes directly. Python dictionaries/lists remain mutable in-memory; modify-after-seal will trigger a verification failure).* | Does not prevent an active attacker from replacing *both* the payload and unkeyed seal if transmitted over an untrusted channel. |
 | **Origin Authenticity** | **Execution Context Binding**: Deterministically binds model prompt, execution profile (hyperparameters), raw response, and metadata into a canonical digest envelope. | **Not Autonomous Author Authentication**: Unkeyed SHA-256 proves data matching, not author identity. For non-repudiation, sign the `EvidenceSeal.seal_sha256` with a private key (e.g., Ed25519) or anchor it in a trusted log. |
 | **Factual Truth** | **Byte Preservation**: Verifies that the recorded text and structured fields are preserved exactly as captured at runtime. | **Not Semantic Truth**: Cryptographic hashing cannot evaluate whether the LLM's claims are factual, accurate, or free from hallucinations. |
-| **Timestamping** | **System Recorded Time**: Records an ISO-8601 UTC timestamp in the canonical envelope preimage. | **Not a TSA Token**: It is a self-asserted ISO-8601 UTC timestamp string captured at runtime, not an RFC 3161 cryptographically certified timestamp from a Timestamp Authority. |
+| **Timestamping** | **Strict ISO-8601 UTC Contract**: Enforces strict ISO-8601 UTC calendar date and timezone validation on seal preimages. | **Not a TSA Token**: It is a strictly validated ISO-8601 UTC timestamp string, not an RFC 3161 cryptographically certified timestamp from a Timestamp Authority. |
 
 ---
 
@@ -49,14 +49,19 @@ To maintain complete cryptographic rigor, `open-evidence` clearly distinguishes 
 
 ## Installation
 
+### From PyPI (Target on Release)
 ```bash
 pip install open-evidence
 ```
 
-Or using `uv`:
-
+### From Source / GitHub Repository
 ```bash
-uv add open-evidence
+pip install git+https://github.com/huangbuqubunao-alt/open-evidence.git
+```
+
+Or for local development:
+```bash
+pip install -e .[dev]
 ```
 
 ---

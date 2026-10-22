@@ -4,6 +4,7 @@ from open_evidence.evidence import (
     EvidenceSeal,
     TamperedEvidenceError,
     seal_payload,
+    validate_iso8601_utc,
     verify_seal,
 )
 
@@ -73,3 +74,62 @@ def test_non_string_dictionary_keys_fail_closed() -> None:
     # Nested dictionary with non-string key must also fail closed
     with pytest.raises(TypeError, match="Evidence payload dictionary keys must be strings"):
         seal_payload({"nested": {100: "bad"}})
+
+
+def test_timestamp_contract_valid_iso8601_utc() -> None:
+    # ISO-8601 UTC with 'Z'
+    seal_z = seal_payload({"val": 1}, created_at="2026-10-22T11:55:49Z")
+    assert seal_z.created_at == "2026-10-22T11:55:49Z"
+    assert verify_seal({"val": 1}, seal_z).is_valid is True
+
+    # ISO-8601 UTC with '+00:00'
+    seal_offset = seal_payload({"val": 2}, created_at="2026-10-22T11:55:49+00:00")
+    assert seal_offset.created_at == "2026-10-22T11:55:49+00:00"
+    assert verify_seal({"val": 2}, seal_offset).is_valid is True
+
+    # ISO-8601 UTC with fractional seconds
+    seal_frac = seal_payload({"val": 3}, created_at="2026-10-22T11:55:49.123456Z")
+    assert seal_frac.created_at == "2026-10-22T11:55:49.123456Z"
+    assert verify_seal({"val": 3}, seal_frac).is_valid is True
+
+
+def test_timestamp_contract_rejects_invalid_values() -> None:
+    # Non-date arbitrary strings
+    with pytest.raises(ValueError, match="Invalid ISO-8601 timestamp string"):
+        seal_payload({"val": 1}, created_at="not-a-date")
+
+    # Empty string
+    with pytest.raises(ValueError, match="Timestamp must be a non-empty string"):
+        seal_payload({"val": 1}, created_at="")
+
+    # Invalid calendar date (Feb 30th)
+    with pytest.raises(ValueError, match="Invalid ISO-8601 timestamp string"):
+        seal_payload({"val": 1}, created_at="2026-02-30T12:00:00Z")
+
+    # Non-UTC timezone offset (+08:00)
+    with pytest.raises(ValueError, match="Timestamp timezone must be UTC"):
+        seal_payload({"val": 1}, created_at="2026-10-22T19:55:49+08:00")
+
+    # Missing timezone offset (naive datetime)
+    with pytest.raises(ValueError, match="Timestamp must include an explicit UTC timezone"):
+        seal_payload({"val": 1}, created_at="2026-10-22T11:55:49")
+
+
+def test_evidence_seal_model_validates_timestamp() -> None:
+    # Direct model construction enforces ISO-8601 UTC validator
+    with pytest.raises(ValueError, match="Invalid ISO-8601 timestamp string"):
+        EvidenceSeal(
+            schema_version="open-evidence/v1",
+            payload_sha256="a" * 64,
+            created_at="not-a-date",
+            metadata={},
+            seal_sha256="b" * 64,
+        )
+
+
+def test_validate_iso8601_utc_direct() -> None:
+    assert validate_iso8601_utc("2026-10-22T11:55:49Z") == "2026-10-22T11:55:49Z"
+    with pytest.raises(ValueError, match="Timestamp must be a non-empty string"):
+        validate_iso8601_utc("   ")
+
+

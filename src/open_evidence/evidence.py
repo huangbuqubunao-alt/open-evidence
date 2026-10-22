@@ -21,7 +21,7 @@ import datetime
 from dataclasses import dataclass
 from typing import Any, Final
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from open_evidence.jcs import jcs_sha256
 
@@ -31,10 +31,42 @@ __all__ = [
     "TamperedEvidenceError",
     "VerificationResult",
     "seal_payload",
+    "validate_iso8601_utc",
     "verify_seal",
 ]
 
 _FROZEN_CONFIG: Final = ConfigDict(extra="forbid", frozen=True)
+
+
+def validate_iso8601_utc(ts: str) -> str:
+    """Validate that a string is a strict, valid ISO-8601 UTC timestamp.
+
+    Requires:
+    1. A valid ISO-8601 representation of an existing calendar date and time.
+    2. An explicit UTC timezone designator ('Z' or offset '+00:00'/'-00:00').
+    Fails closed with ValueError for malformed strings, invalid calendar dates
+    (e.g. Feb 30), or non-UTC offsets.
+    """
+    if not isinstance(ts, str) or not ts.strip():
+        msg = f"Timestamp must be a non-empty string, got {ts!r}"
+        raise ValueError(msg)
+
+    try:
+        dt = datetime.datetime.fromisoformat(ts)
+    except Exception as exc:
+        msg = f"Invalid ISO-8601 timestamp string: {ts!r}"
+        raise ValueError(msg) from exc
+
+    if dt.tzinfo is None:
+        msg = f"Timestamp must include an explicit UTC timezone ('Z' or '+00:00'): {ts!r}"
+        raise ValueError(msg)
+
+    offset = dt.utcoffset()
+    if offset is None or offset.total_seconds() != 0:
+        msg = f"Timestamp timezone must be UTC (offset 0), got offset {offset} in {ts!r}"
+        raise ValueError(msg)
+
+    return ts
 
 
 class IntegrityVerificationError(ValueError):
@@ -58,6 +90,11 @@ class EvidenceSeal(BaseModel):
     created_at: str
     metadata: dict[str, Any] = Field(default_factory=dict)
     seal_sha256: str = Field(..., pattern=r"^[0-9a-f]{64}$")
+
+    @field_validator("created_at")
+    @classmethod
+    def validate_created_at(cls, v: str) -> str:
+        return validate_iso8601_utc(v)
 
 
 @dataclass(frozen=True, slots=True)
@@ -112,7 +149,10 @@ def seal_payload(
     plain_payload = _to_plain_dict(payload)
     payload_hash = jcs_sha256(plain_payload)
 
-    timestamp = created_at or datetime.datetime.now(datetime.timezone.utc).isoformat()
+    if created_at is not None:
+        timestamp = validate_iso8601_utc(created_at)
+    else:
+        timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
     meta = metadata or {}
     plain_meta = _to_plain_dict(meta)
 
