@@ -96,9 +96,7 @@ def _format_number(value: float) -> str:
     power = decimal_point - 1
     power_sign = "+" if power >= 0 else "-"
     mantissa = (
-        digit_string
-        if digit_count == 1
-        else digit_string[0] + "." + digit_string[1:]
+        digit_string if digit_count == 1 else digit_string[0] + "." + digit_string[1:]
     )
     return sign + mantissa + "e" + power_sign + str(abs(power))
 

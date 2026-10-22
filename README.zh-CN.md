@@ -74,7 +74,7 @@ from open_evidence import seal_payload, verify_seal
 payload = {
     "claim": "本季度运营利润率同比提升 14.2%",
     "source_documents": ["sec_10k_item7.pdf#p42"],
-    "confidence_score": 0.96
+    "confidence_score": 0.96,
 }
 
 # 生成加密完整性封签
@@ -96,7 +96,7 @@ from open_evidence import verify_seal
 tampered_payload = {
     "claim": "本季度运营利润率同比提升 14.2%",
     "source_documents": ["sec_10k_item7.pdf#p42"],
-    "confidence_score": 0.99  # 被恶意篡改
+    "confidence_score": 0.99,  # 被恶意篡改
 }
 
 result = verify_seal(tampered_payload, seal)

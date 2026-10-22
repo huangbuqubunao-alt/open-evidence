@@ -36,7 +36,9 @@ def main() -> None:
 
     # Step 2: Simulated LLM Call & Sealing
     prompt_text = "Extract key risk factors from quarterly report."
-    mock_llm_raw = '{"risk_level": "MODERATE", "primary_factor": "Supply chain disruption"}'
+    mock_llm_raw = (
+        '{"risk_level": "MODERATE", "primary_factor": "Supply chain disruption"}'
+    )
     mock_structured = json.loads(mock_llm_raw)
 
     response = AuditedModelResponse.create(
@@ -64,10 +66,15 @@ def main() -> None:
         "profile_sha256": response.profile_sha256,
         "prompt_sha256": response.prompt_sha256,
         "raw_response": mock_llm_raw,
-        "structured_data": {"risk_level": "LOW", "primary_factor": "Supply chain disruption"},  # Altered!
+        "structured_data": {
+            "risk_level": "LOW",
+            "primary_factor": "Supply chain disruption",
+        },  # Altered!
     }
     tamper_result = verify_seal(tampered_payload, response.seal)
-    print(f"   Payload Tamper Valid: {tamper_result.is_valid} (Error: {tamper_result.error_message})")
+    print(
+        f"   Payload Tamper Valid: {tamper_result.is_valid} (Error: {tamper_result.error_message})"
+    )
     assert not tamper_result.is_valid, "Data modification should be detected!"
 
     # Scenario B: Execution profile swapping (e.g. claiming o3-mini but actually gpt-4o)
@@ -87,14 +94,24 @@ def main() -> None:
         structured_data=response.structured_data,
         seal=response.seal,
     )
-    profile_tamper_result = verify_audited_response(bypassed_response, prompt=prompt_text)
-    print(f"   Profile Tamper Valid: {profile_tamper_result.is_valid} (Error: {profile_tamper_result.error_message})")
+    profile_tamper_result = verify_audited_response(
+        bypassed_response, prompt=prompt_text
+    )
+    print(
+        f"   Profile Tamper Valid: {profile_tamper_result.is_valid} (Error: {profile_tamper_result.error_message})"
+    )
     assert not profile_tamper_result.is_valid, "Profile swap must be detected!"
 
     print("\n=== Security Boundary Clarification ===")
-    print("- Content Integrity: GUARANTEED (detects byte mismatch against authentic seal).")
-    print("- Origin Authenticity: Requires anchoring the seal digest or asymmetric signing (e.g., Ed25519).")
-    print("- Factual Truth: Cryptographic seals verify byte preservation, not model semantic factuality.")
+    print(
+        "- Content Integrity: GUARANTEED (detects byte mismatch against authentic seal)."
+    )
+    print(
+        "- Origin Authenticity: Requires anchoring the seal digest or asymmetric signing (e.g., Ed25519)."
+    )
+    print(
+        "- Factual Truth: Cryptographic seals verify byte preservation, not model semantic factuality."
+    )
     print("\n=== All Verification Checks Succeeded ===")
 
 

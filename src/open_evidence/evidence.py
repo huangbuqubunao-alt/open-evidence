@@ -58,12 +58,16 @@ def validate_iso8601_utc(ts: str) -> str:
         raise ValueError(msg) from exc
 
     if dt.tzinfo is None:
-        msg = f"Timestamp must include an explicit UTC timezone ('Z' or '+00:00'): {ts!r}"
+        msg = (
+            f"Timestamp must include an explicit UTC timezone ('Z' or '+00:00'): {ts!r}"
+        )
         raise ValueError(msg)
 
     offset = dt.utcoffset()
     if offset is None or offset.total_seconds() != 0:
-        msg = f"Timestamp timezone must be UTC (offset 0), got offset {offset} in {ts!r}"
+        msg = (
+            f"Timestamp timezone must be UTC (offset 0), got offset {offset} in {ts!r}"
+        )
         raise ValueError(msg)
 
     return ts

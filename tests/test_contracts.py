@@ -66,7 +66,9 @@ def test_fallback_policy_rejects_cycles() -> None:
     assert len(policy.fallback_profiles) == 1
 
     # Cycle: primary is duplicated in fallback
-    with pytest.raises(ValueError, match="Duplicate or cyclic fallback profile detected"):
+    with pytest.raises(
+        ValueError, match="Duplicate or cyclic fallback profile detected"
+    ):
         FallbackPolicy(
             primary_profile=profile1,
             fallback_profiles=[profile1],
@@ -216,4 +218,3 @@ def test_audited_model_response_detects_metadata_mismatch() -> None:
     assert res.is_valid is False
     assert res.error_message is not None
     assert "Seal metadata model mismatch" in res.error_message
-

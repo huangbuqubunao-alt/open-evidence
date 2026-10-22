@@ -60,19 +60,27 @@ def test_tampered_seal_metadata_detected() -> None:
 
 def test_non_string_dictionary_keys_fail_closed() -> None:
     # Integer key must be rejected, not converted silently to string
-    with pytest.raises(TypeError, match="Evidence payload dictionary keys must be strings"):
+    with pytest.raises(
+        TypeError, match="Evidence payload dictionary keys must be strings"
+    ):
         seal_payload({1: "val"})
 
     # Boolean key must be rejected
-    with pytest.raises(TypeError, match="Evidence payload dictionary keys must be strings"):
+    with pytest.raises(
+        TypeError, match="Evidence payload dictionary keys must be strings"
+    ):
         seal_payload({True: "val"})
 
     # Collision-prone dict with both int and string keys must fail closed
-    with pytest.raises(TypeError, match="Evidence payload dictionary keys must be strings"):
+    with pytest.raises(
+        TypeError, match="Evidence payload dictionary keys must be strings"
+    ):
         seal_payload({1: "first", "1": "second"})
 
     # Nested dictionary with non-string key must also fail closed
-    with pytest.raises(TypeError, match="Evidence payload dictionary keys must be strings"):
+    with pytest.raises(
+        TypeError, match="Evidence payload dictionary keys must be strings"
+    ):
         seal_payload({"nested": {100: "bad"}})
 
 
@@ -111,7 +119,9 @@ def test_timestamp_contract_rejects_invalid_values() -> None:
         seal_payload({"val": 1}, created_at="2026-10-22T19:55:49+08:00")
 
     # Missing timezone offset (naive datetime)
-    with pytest.raises(ValueError, match="Timestamp must include an explicit UTC timezone"):
+    with pytest.raises(
+        ValueError, match="Timestamp must include an explicit UTC timezone"
+    ):
         seal_payload({"val": 1}, created_at="2026-10-22T11:55:49")
 
 
@@ -131,5 +141,3 @@ def test_validate_iso8601_utc_direct() -> None:
     assert validate_iso8601_utc("2026-10-22T11:55:49Z") == "2026-10-22T11:55:49Z"
     with pytest.raises(ValueError, match="Timestamp must be a non-empty string"):
         validate_iso8601_utc("   ")
-
-

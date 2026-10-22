@@ -37,11 +37,17 @@ def test_integer_safe_range_boundaries() -> None:
     assert jcs_serialize(-9007199254740991) == b"-9007199254740991"
 
     # Beyond boundary: must raise ValueError to prevent IEEE 754 precision loss
-    with pytest.raises(ValueError, match="exceeds the I-JSON / IEEE-754 safe integer range"):
+    with pytest.raises(
+        ValueError, match="exceeds the I-JSON / IEEE-754 safe integer range"
+    ):
         jcs_serialize(9007199254740992)
-    with pytest.raises(ValueError, match="exceeds the I-JSON / IEEE-754 safe integer range"):
+    with pytest.raises(
+        ValueError, match="exceeds the I-JSON / IEEE-754 safe integer range"
+    ):
         jcs_serialize(-9007199254740992)
-    with pytest.raises(ValueError, match="exceeds the I-JSON / IEEE-754 safe integer range"):
+    with pytest.raises(
+        ValueError, match="exceeds the I-JSON / IEEE-754 safe integer range"
+    ):
         jcs_serialize(2**60)
 
 
@@ -57,7 +63,7 @@ def test_rfc8785_official_reference_vector() -> None:
     expected = (
         b'{"literals":[null,true,false],'
         b'"numbers":[333333333.3333333,1e+30,4.5,0.002,1e-27],'
-        b'"string":"\xe2\x82\xac$\\u000f\\nA\'B\\"\\\\\\\\\\"/\"}'
+        b'"string":"\xe2\x82\xac$\\u000f\\nA\'B\\"\\\\\\\\\\"/"}'
     )
     assert serialized == expected
 
@@ -99,7 +105,9 @@ def test_no_insignificant_whitespace() -> None:
 def test_string_escaping() -> None:
     data = {"quote": '"', "backslash": "\\", "newline": "\n", "tab": "\t"}
     serialized = jcs_serialize(data)
-    assert serialized == b'{"backslash":"\\\\","newline":"\\n","quote":"\\"","tab":"\\t"}'
+    assert (
+        serialized == b'{"backslash":"\\\\","newline":"\\n","quote":"\\"","tab":"\\t"}'
+    )
 
 
 def test_duplicate_keys_rejected() -> None:
@@ -114,9 +122,13 @@ def test_sha256_deterministic() -> None:
 
 
 def test_jcs_loads_strict_rejects_inf_and_nan_numbers() -> None:
-    with pytest.raises(ValueError, match="non-finite JSON number out of IEEE 754 range"):
+    with pytest.raises(
+        ValueError, match="non-finite JSON number out of IEEE 754 range"
+    ):
         jcs_loads_strict("1e999")
-    with pytest.raises(ValueError, match="non-finite JSON number out of IEEE 754 range"):
+    with pytest.raises(
+        ValueError, match="non-finite JSON number out of IEEE 754 range"
+    ):
         jcs_loads_strict("-1e999")
     with pytest.raises(ValueError, match="non-finite JSON constant"):
         jcs_loads_strict("NaN")
@@ -125,11 +137,17 @@ def test_jcs_loads_strict_rejects_inf_and_nan_numbers() -> None:
 
 
 def test_jcs_loads_strict_rejects_out_of_range_integers() -> None:
-    with pytest.raises(ValueError, match="exceeds I-JSON / IEEE-754 safe integer range"):
+    with pytest.raises(
+        ValueError, match="exceeds I-JSON / IEEE-754 safe integer range"
+    ):
         jcs_loads_strict("9007199254740992")
-    with pytest.raises(ValueError, match="exceeds I-JSON / IEEE-754 safe integer range"):
+    with pytest.raises(
+        ValueError, match="exceeds I-JSON / IEEE-754 safe integer range"
+    ):
         jcs_loads_strict("-9007199254740992")
-    with pytest.raises(ValueError, match="exceeds I-JSON / IEEE-754 safe integer range"):
+    with pytest.raises(
+        ValueError, match="exceeds I-JSON / IEEE-754 safe integer range"
+    ):
         jcs_loads_strict("1000000000000000000000000000000")
 
 

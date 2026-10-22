@@ -76,7 +76,7 @@ from open_evidence import seal_payload, verify_seal
 payload = {
     "claim": "Quarterly operating profit increased by 14.2%",
     "source_documents": ["sec_10k_item7.pdf#p42"],
-    "confidence_score": 0.96
+    "confidence_score": 0.96,
 }
 
 # Generate deterministic cryptographic integrity seal
@@ -98,7 +98,7 @@ from open_evidence import verify_seal, IntegrityVerificationError
 tampered_payload = {
     "claim": "Quarterly operating profit increased by 14.2%",
     "source_documents": ["sec_10k_item7.pdf#p42"],
-    "confidence_score": 0.99  # Modified!
+    "confidence_score": 0.99,  # Modified!
 }
 
 result = verify_seal(tampered_payload, seal)
